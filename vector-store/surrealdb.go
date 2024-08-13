@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JuliusMoehring/court-judgment-finder-crawler/logger"
 	"github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/conn/gorilla"
 	"github.com/surrealdb/surrealdb.go/pkg/marshal"
@@ -15,10 +16,11 @@ import (
 type SurrealDBVectorStore struct {
 	mu sync.Mutex
 
-	db *surrealdb.DB
+	logger logger.Logger
+	db     *surrealdb.DB
 }
 
-func NewSurrealDBVectorStore() VectorStore {
+func NewSurrealDBVectorStore(logger logger.Logger) VectorStore {
 	ws, err := gorilla.Create().Connect("ws://localhost:8000/rpc")
 	if err != nil {
 		panic(err)
@@ -41,7 +43,8 @@ func NewSurrealDBVectorStore() VectorStore {
 	}
 
 	return &SurrealDBVectorStore{
-		db: db,
+		logger: logger,
+		db:     db,
 	}
 }
 
@@ -63,7 +66,6 @@ func (v *SurrealDBVectorStore) CreateDocument(ctx context.Context, params Create
 	}
 
 	v.db.Query("BEGIN TRANSACTION;", nil)
-	defer v.db.Query("CANCEL TRANSACTION;", nil)
 
 	var pageIDs []string
 
@@ -73,7 +75,9 @@ func (v *SurrealDBVectorStore) CreateDocument(ctx context.Context, params Create
 			"text":      p.Text,
 			"embedding": p.Embedding,
 		}))
-		if err != nil {
+		if err != nil || len(pages) != 1 {
+			v.logger.Errorf("vector-store", "failed to create page %d for path '%s'. Cancelling transaction.", i+1, params.FilePath)
+			v.db.Query("CANCEL TRANSACTION;", nil)
 			return err
 		}
 
@@ -84,10 +88,16 @@ func (v *SurrealDBVectorStore) CreateDocument(ctx context.Context, params Create
 		"filePath": params.FilePath,
 		"pages":    pageIDs,
 	}); err != nil {
+		v.logger.Errorf("vector-store", "failed to create document for path '%s'. Cancelling transaction.", params.FilePath)
+		v.db.Query("CANCEL TRANSACTION;", nil)
 		return err
 	}
 
-	v.db.Query("COMMIT TRANSACTION;", nil)
+	if _, err := v.db.Query("COMMIT TRANSACTION;", nil); err != nil {
+		v.logger.Errorf("vector-store", "failed to commit transaction. Cancelling transaction.")
+		v.db.Query("CANCEL TRANSACTION;", nil)
+		return err
+	}
 
 	return nil
 }

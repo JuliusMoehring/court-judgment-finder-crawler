@@ -93,7 +93,7 @@ func (c *Crawler) getAvailableYears(collector *colly.Collector, years *[]int) {
 			*years = append(*years, year)
 		})
 
-		c.logger.Debugf("Got %d available years, took %s", len(*years), time.Since(start))
+		c.logger.Debugf("crawler", "Got %d available years, took %s", len(*years), time.Since(start))
 	})
 }
 
@@ -223,7 +223,7 @@ func (c *Crawler) Crawl(ctx context.Context) ([]string, error) {
 
 	wg.Wait()
 
-	c.logger.Debugf("Finished crawling Bundesgerichtshof website, found %d unique pdf links", len(links.getLinks()))
+	c.logger.Debugf("crawler", "Finished crawling Bundesgerichtshof website, found %d unique pdf links", len(links.getLinks()))
 
 	return links.getLinks(), nil
 }

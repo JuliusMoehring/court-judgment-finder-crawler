@@ -22,7 +22,7 @@ type S3FileStorage struct {
 func NewS3FileStorage(ctx context.Context, logger logger.Logger, bucket string) FileStorage {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		logger.Fatalf("Unable to load AWS SDK config: %s", err)
+		logger.Fatalf("file-storage", "Unable to load AWS SDK config: %s", err)
 	}
 
 	client := s3.NewFromConfig(cfg)

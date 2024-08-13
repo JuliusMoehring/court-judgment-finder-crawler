@@ -34,42 +34,42 @@ func (l *FileLogger) Close() {
 	l.logfile.Close()
 }
 
-func (l *FileLogger) Debug(args ...interface{}) {
+func (l *FileLogger) Debug(domain string, args ...interface{}) {
 	l.logger.Debug(args...)
 }
 
-func (l *FileLogger) Debugf(format string, args ...interface{}) {
+func (l *FileLogger) Debugf(domain string, format string, args ...interface{}) {
 	l.logger.Debugf(format, args...)
 }
 
-func (l *FileLogger) Info(args ...interface{}) {
+func (l *FileLogger) Info(domain string, args ...interface{}) {
 	l.logger.Info(args...)
 }
 
-func (l *FileLogger) Infof(format string, args ...interface{}) {
+func (l *FileLogger) Infof(domain string, format string, args ...interface{}) {
 	l.logger.Infof(format, args...)
 }
 
-func (l *FileLogger) Warn(args ...interface{}) {
+func (l *FileLogger) Warn(domain string, args ...interface{}) {
 	l.logger.Warn(args...)
 }
 
-func (l *FileLogger) Warnf(format string, args ...interface{}) {
+func (l *FileLogger) Warnf(domain string, format string, args ...interface{}) {
 	l.logger.Warnf(format, args...)
 }
 
-func (l *FileLogger) Error(args ...interface{}) {
+func (l *FileLogger) Error(domain string, args ...interface{}) {
 	l.logger.Error(args...)
 }
 
-func (l *FileLogger) Errorf(format string, args ...interface{}) {
+func (l *FileLogger) Errorf(domain string, format string, args ...interface{}) {
 	l.logger.Errorf(format, args...)
 }
 
-func (l *FileLogger) Fatal(args ...interface{}) {
+func (l *FileLogger) Fatal(domain string, args ...interface{}) {
 	l.logger.Fatal(args...)
 }
 
-func (l *FileLogger) Fatalf(format string, args ...interface{}) {
+func (l *FileLogger) Fatalf(domain string, format string, args ...interface{}) {
 	l.logger.Fatalf(format, args...)
 }

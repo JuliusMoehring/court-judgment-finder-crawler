@@ -27,42 +27,62 @@ func (l *StdOutLogger) Close() {
 	// Nothing to do here
 }
 
-func (l *StdOutLogger) Debug(args ...interface{}) {
-	l.logger.Debug(args...)
+func (l *StdOutLogger) Debug(domain string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Debug(args...)
 }
 
-func (l *StdOutLogger) Debugf(format string, args ...interface{}) {
-	l.logger.Debugf(format, args...)
+func (l *StdOutLogger) Debugf(domain string, format string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Debugf(format, args...)
 }
 
-func (l *StdOutLogger) Info(args ...interface{}) {
-	l.logger.Info(args...)
+func (l *StdOutLogger) Info(domain string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Info(args...)
 }
 
-func (l *StdOutLogger) Infof(format string, args ...interface{}) {
-	l.logger.Infof(format, args...)
+func (l *StdOutLogger) Infof(domain string, format string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Infof(format, args...)
 }
 
-func (l *StdOutLogger) Warn(args ...interface{}) {
-	l.logger.Warn(args...)
+func (l *StdOutLogger) Warn(domain string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Warn(args...)
 }
 
-func (l *StdOutLogger) Warnf(format string, args ...interface{}) {
-	l.logger.Warnf(format, args...)
+func (l *StdOutLogger) Warnf(domain string, format string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Warnf(format, args...)
 }
 
-func (l *StdOutLogger) Error(args ...interface{}) {
-	l.logger.Error(args...)
+func (l *StdOutLogger) Error(domain string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Error(args...)
 }
 
-func (l *StdOutLogger) Errorf(format string, args ...interface{}) {
-	l.logger.Errorf(format, args...)
+func (l *StdOutLogger) Errorf(domain string, format string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Errorf(format, args...)
 }
 
-func (l *StdOutLogger) Fatal(args ...interface{}) {
-	l.logger.Fatal(args...)
+func (l *StdOutLogger) Fatal(domain string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Fatal(args...)
 }
 
-func (l *StdOutLogger) Fatalf(format string, args ...interface{}) {
-	l.logger.Fatalf(format, args...)
+func (l *StdOutLogger) Fatalf(domain string, format string, args ...interface{}) {
+	l.logger.WithFields(log.Fields{
+		"domain": domain,
+	}).Fatalf(format, args...)
 }

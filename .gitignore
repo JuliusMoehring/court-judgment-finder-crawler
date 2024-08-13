@@ -1,0 +1,8 @@
+.DS_Store
+
+bgh/cache
+court-judgements
+vector-db.db
+.env
+
+temp

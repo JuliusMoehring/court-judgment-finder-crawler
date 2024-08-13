@@ -1,0 +1,21 @@
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    mem_limit: 256m
+    entrypoint:
+      - /surreal
+      - start
+      - --auth
+      - --log
+      - debug
+      - --user
+      - $SURREAL_USER
+      - --pass
+      - $SURREAL_PASSWORD
+      - file:vector-db.db
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./vector-db.db:/vector-db.db

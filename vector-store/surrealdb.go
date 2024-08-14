@@ -3,9 +3,9 @@ package vectorstore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/JuliusMoehring/court-judgment-finder-crawler/logger"
 	"github.com/surrealdb/surrealdb.go"
@@ -57,46 +57,49 @@ func (v *SurrealDBVectorStore) CreateDocument(ctx context.Context, params Create
 	defer v.mu.Unlock()
 
 	type page struct {
-		ID        string    `json:"id,omitempty"`
 		Page      int       `json:"page"`
 		Text      string    `json:"text"`
 		Embedding []float32 `json:"embedding"`
-		CreatedAt time.Time `json:"createdAt,omitempty"`
-		UpdatedAt time.Time `json:"updatedAt,omitempty"`
 	}
 
-	v.db.Query("BEGIN TRANSACTION;", nil)
-
-	var pageIDs []string
+	var pages []page
 
 	for i, p := range params.Pages {
-		pages, err := marshal.SmartUnmarshal[page](v.db.Create("page", map[string]interface{}{
-			"page":      i + 1,
-			"text":      p.Text,
-			"embedding": p.Embedding,
-		}))
-		if err != nil || len(pages) != 1 {
-			v.logger.Errorf("vector-store", "failed to create page %d for path '%s'. Cancelling transaction.", i+1, params.FilePath)
-			v.db.Query("CANCEL TRANSACTION;", nil)
-			return err
+		pages = append(pages, page{
+			Page:      i + 1,
+			Text:      p.Text,
+			Embedding: p.Embedding,
+		})
+	}
+
+	response, err := v.db.Query(`
+		BEGIN TRANSACTION;
+
+		LET $doc = (CREATE ONLY document SET filePath = $filePath);
+
+		INSERT INTO page (SELECT *, [$doc.id, page] AS id FROM $pages);
+
+		COMMIT TRANSACTION;`,
+		map[string]interface{}{
+			"filePath": params.FilePath,
+			"pages":    pages,
+		})
+	if err != nil {
+		v.logger.Errorf("vector-store", "failed to create document for path '%s'.", params.FilePath)
+		return err
+	}
+
+	var queryResult []marshal.RawQuery[any]
+
+	if err := marshal.UnmarshalRaw(response, &queryResult); err != nil {
+		v.logger.Errorf("vector-store", "failed to unmarshal response for path '%s': %s", params.FilePath, err)
+		return err
+	}
+
+	for _, result := range queryResult {
+		if result.Status != marshal.StatusOK {
+			return errors.New(fmt.Sprintf("failed to create document for path '%s': %s", params.FilePath, result.Detail))
 		}
-
-		pageIDs = append(pageIDs, pages[0].ID)
-	}
-
-	if _, err := v.db.Create("document", map[string]interface{}{
-		"filePath": params.FilePath,
-		"pages":    pageIDs,
-	}); err != nil {
-		v.logger.Errorf("vector-store", "failed to create document for path '%s'. Cancelling transaction.", params.FilePath)
-		v.db.Query("CANCEL TRANSACTION;", nil)
-		return err
-	}
-
-	if _, err := v.db.Query("COMMIT TRANSACTION;", nil); err != nil {
-		v.logger.Errorf("vector-store", "failed to commit transaction. Cancelling transaction.")
-		v.db.Query("CANCEL TRANSACTION;", nil)
-		return err
 	}
 
 	return nil

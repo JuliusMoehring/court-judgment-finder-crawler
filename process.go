@@ -156,12 +156,14 @@ func (p *Processor) processLink(ctx context.Context, link string) error {
 
 func (p *Processor) Process(ctx context.Context, downloadLinks <-chan string) error {
 	for link := range downloadLinks {
-		p.logger.Debugf("processor", "processing link: %s", link)
+		p.logger.Debugf("processor", "processing link: '%s'", link)
 
 		if err := p.processLink(ctx, link); err != nil {
-			p.logger.Errorf("processor", "failed processing link: %s", err)
+			p.logger.Errorf("processor", "failed processing link: '%s'", err)
 			return err
 		}
+
+		p.logger.Debugf("processor", "processed link: '%s'. %d more links to process.", link, len(downloadLinks))
 	}
 
 	return nil

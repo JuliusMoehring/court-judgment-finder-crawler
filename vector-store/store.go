@@ -1,6 +1,9 @@
 package vectorstore
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 type CreateDocumentParamsPage struct {
 	Text      string
@@ -12,9 +15,11 @@ type CreateDocumentParams struct {
 	Pages    []CreateDocumentParamsPage
 }
 
+var ErrDocumentNotFound = errors.New("document not found")
+
 type VectorStore interface {
 	Close()
 
 	CreateDocument(ctx context.Context, params CreateDocumentParams) error
-	GetDocumentIDByPath(ctx context.Context, path string) (string, error)
+	GetDocumentIDByFilePath(ctx context.Context, path string) (string, error)
 }

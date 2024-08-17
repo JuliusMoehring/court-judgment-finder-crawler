@@ -105,9 +105,7 @@ func (v *SurrealDBVectorStore) CreateDocument(ctx context.Context, params Create
 	return nil
 }
 
-var ErrDocumentNotFound = errors.New("document not found")
-
-func (v *SurrealDBVectorStore) GetDocumentIDByPath(ctx context.Context, path string) (string, error) {
+func (v *SurrealDBVectorStore) GetDocumentIDByFilePath(ctx context.Context, path string) (string, error) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 

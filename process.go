@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/JuliusMoehring/court-judgment-finder-crawler/bgh"
 	"github.com/JuliusMoehring/court-judgment-finder-crawler/download"
@@ -42,7 +43,7 @@ func (p *Processor) shouldProcessLink(ctx context.Context, path string) (bool, e
 		return false, err
 	}
 
-	documentID, err := p.vectorStore.GetDocumentIDByPath(ctx, path)
+	documentID, err := p.vectorStore.GetDocumentIDByFilePath(ctx, path)
 	// If the error is not that the document is not found, we return the error
 	if err != nil && !errors.Is(err, vectorstore.ErrDocumentNotFound) {
 		p.logger.Errorf("processor", "failed checking if document exists in vector store: %s", err)
@@ -110,16 +111,29 @@ func (p *Processor) processLink(ctx context.Context, link string) error {
 		return nil
 	}
 
+	start := time.Now()
+	p.logger.Debugf("processor", "downloading document: %s", link)
+
 	data, err := p.downloader.Download(ctx, link)
 	if err != nil {
 		p.logger.Errorf("processor", "failed downloading document: %s", err)
 		return err
 	}
 
+	p.logger.Debugf("processor", "downloaded document: %s, took: %s", link, time.Since(start))
+
+	start = time.Now()
+	p.logger.Debugf("processor", "saving document to file storage: %s", link)
+
 	if err := p.fileStorage.Save(ctx, data, path); err != nil {
 		p.logger.Errorf("processor", "failed saving document to file storage: %s", err)
 		return err
 	}
+
+	p.logger.Debugf("processor", "saved document to file storage: %s, took: %s", link, time.Since(start))
+
+	start = time.Now()
+	p.logger.Debugf("processor", "converting pdf to text: %s", link)
 
 	text, err := p.pdfToText(ctx, data)
 	if err != nil {
@@ -127,20 +141,26 @@ func (p *Processor) processLink(ctx context.Context, link string) error {
 		return err
 	}
 
-	var judgementPages []vectorstore.CreateDocumentParamsPage
+	p.logger.Debugf("processor", "converted pdf to text: %s, took: %s", link, time.Since(start))
 
 	pages := strings.Split(text, "\f")
+
+	var judgementPages []vectorstore.CreateDocumentParamsPage
 
 	for i, page := range pages {
 		if len(page) == 0 {
 			continue
 		}
 
+		p.logger.Debugf("processor", "creating embeddings for page %d/%d of link %s", i+1, len(pages), link)
+
 		embedding, err := p.embedder.Embed(ctx, page)
 		if err != nil {
-			p.logger.Errorf("processor", "failed to create embddings for page %d of link %s: %s", i+1, link, err)
+			p.logger.Errorf("processor", "failed to create embddings for page %d/%d of link %s: %s", i+1, len(pages), link, err)
 			return err
 		}
+
+		p.logger.Debugf("processor", "created embeddings for page %d/%d of link %s", i+1, len(pages), link)
 
 		judgementPages = append(judgementPages, vectorstore.CreateDocumentParamsPage{
 			Text:      page,
@@ -148,23 +168,23 @@ func (p *Processor) processLink(ctx context.Context, link string) error {
 		})
 	}
 
+	p.logger.Debugf("processor", "creating document in vector store: %s", link)
+
 	return p.vectorStore.CreateDocument(ctx, vectorstore.CreateDocumentParams{
 		FilePath: path,
 		Pages:    judgementPages,
 	})
 }
 
-func (p *Processor) Process(ctx context.Context, downloadLinks <-chan string) error {
+func (p *Processor) Process(ctx context.Context, downloadLinks <-chan string, errors chan<- error) {
 	for link := range downloadLinks {
 		p.logger.Debugf("processor", "processing link: '%s'", link)
 
 		if err := p.processLink(ctx, link); err != nil {
-			p.logger.Errorf("processor", "failed processing link: '%s'", err)
-			return err
+			errors <- err
+			continue
 		}
 
 		p.logger.Debugf("processor", "processed link: '%s'. %d more links to process.", link, len(downloadLinks))
 	}
-
-	return nil
 }

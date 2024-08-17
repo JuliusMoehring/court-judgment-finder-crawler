@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"sync"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -11,6 +12,8 @@ import (
 var NoEmbeddingsReturnedError = errors.New("no embeddings returned")
 
 type OpenAIEmbedder struct {
+	mu sync.Mutex
+
 	client *openai.Client
 }
 
@@ -21,6 +24,9 @@ func NewOpenAIEmbedder() Embedder {
 }
 
 func (e *OpenAIEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	request := openai.EmbeddingRequest{
 		Input: []string{text},
 		Model: openai.AdaEmbeddingV2,

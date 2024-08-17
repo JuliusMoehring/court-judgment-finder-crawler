@@ -33,7 +33,7 @@ func main() {
 	fileStorage := filestorage.NewS3FileStorage(ctx, logger, "court-judgement-finder")
 	pdfReader := pdf.NewPopperPDFReader()
 	embedder := embedder.NewOpenAIEmbedder()
-	vectorStore := vectorstore.NewSurrealDBVectorStore(logger)
+	vectorStore := vectorstore.NewPostgresVectorStore(ctx, logger)
 	defer vectorStore.Close()
 
 	// Initialize crawler
@@ -47,6 +47,7 @@ func main() {
 	processor := NewProcessor(logger, downloader, fileStorage, pdfReader, embedder, vectorStore)
 
 	downloadLinks := make(chan string, len(links))
+	errors := make(chan error)
 
 	var wg sync.WaitGroup
 
@@ -54,17 +55,21 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := processor.Process(ctx, downloadLinks); err != nil {
-				logger.Errorf("processor", "error processing PDF links: %s", err)
-			}
+			processor.Process(ctx, downloadLinks, errors)
 		}()
 	}
 
 	for _, link := range links {
 		downloadLinks <- link
 	}
+
 	close(downloadLinks)
 
 	wg.Wait()
 
+	close(errors)
+
+	for err := range errors {
+		logger.Errorf("processor", "failed processing link: '%s'", err)
+	}
 }
